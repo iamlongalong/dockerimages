@@ -15,7 +15,7 @@ A command-line tool for saving Docker images to tar files.
 ## Installation
 
 ```bash
-go install github.com/iamlongalong/dockerimages
+go install github.com/iamlongalong/dockerimages@latest
 ```
 
 ## Usage
