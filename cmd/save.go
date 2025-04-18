@@ -155,7 +155,12 @@ func pullImageIfNotExists(image string) error {
 	cmd := exec.Command("docker", "image", "inspect", image)
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("Pulling image %s...\n", image)
-		pullCmd := exec.Command("docker", "pull", image)
+		args := []string{"pull"}
+		if platform != "" {
+			args = append(args, "--platform", platform)
+		}
+		args = append(args, image)
+		pullCmd := exec.Command("docker", args...)
 		pullCmd.Stdout = os.Stdout
 		pullCmd.Stderr = os.Stderr
 		return pullCmd.Run()

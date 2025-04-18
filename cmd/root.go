@@ -13,6 +13,7 @@ var (
 	imagesFile  string
 	composeFile string
 	interactive bool
+	platform    string
 )
 
 var rootCmd = &cobra.Command{
@@ -39,4 +40,5 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&imagesFile, "file", "f", "", "File containing image names (one per line)")
 	rootCmd.PersistentFlags().StringVarP(&composeFile, "compose", "c", "", "Docker compose file path")
 	rootCmd.PersistentFlags().BoolVarP(&interactive, "interactive", "i", false, "Interactive mode to select images")
+	rootCmd.PersistentFlags().StringVarP(&platform, "platform", "p", "", "Target platform (e.g., linux/amd64, linux/arm64)")
 }
