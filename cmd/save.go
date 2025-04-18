@@ -177,11 +177,55 @@ func saveMergedImages(images []string) error {
 	}
 
 	outputFile := filepath.Join(outputDir, "images.tar")
-	args := append([]string{"save", "-o", outputFile}, images...)
-	cmd := exec.Command("docker", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	if gzipCompress {
+		outputFile += ".gz"
+	}
+
+	if gzipCompress {
+		cmd := exec.Command("docker", append([]string{"save"}, images...)...)
+		gzipCmd := exec.Command("gzip", "-c")
+
+		// Create the output file
+		outFile, err := os.Create(outputFile)
+		if err != nil {
+			return fmt.Errorf("failed to create output file: %v", err)
+		}
+		defer outFile.Close()
+
+		// Connect the commands
+		gzipCmd.Stdin, err = cmd.StdoutPipe()
+		if err != nil {
+			return fmt.Errorf("failed to create pipe: %v", err)
+		}
+		gzipCmd.Stdout = outFile
+		gzipCmd.Stderr = os.Stderr
+		cmd.Stderr = os.Stderr
+
+		// Start the gzip command first
+		if err := gzipCmd.Start(); err != nil {
+			return fmt.Errorf("failed to start gzip: %v", err)
+		}
+
+		// Run the docker save command
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to save images: %v", err)
+		}
+
+		// Wait for gzip to finish
+		if err := gzipCmd.Wait(); err != nil {
+			return fmt.Errorf("failed to compress: %v", err)
+		}
+	} else {
+		args := append([]string{"save", "-o", outputFile}, images...)
+		cmd := exec.Command("docker", args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to save images: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func saveIndividualImages(images []string) error {
@@ -193,11 +237,51 @@ func saveIndividualImages(images []string) error {
 
 		safeName := strings.ReplaceAll(strings.ReplaceAll(image, "/", "_"), ":", "_")
 		outputFile := filepath.Join(outputDir, safeName+".tar")
-		cmd := exec.Command("docker", "save", "-o", outputFile, image)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to save image %s: %v", image, err)
+		if gzipCompress {
+			outputFile += ".gz"
+		}
+
+		if gzipCompress {
+			cmd := exec.Command("docker", "save", image)
+			gzipCmd := exec.Command("gzip", "-c")
+
+			// Create the output file
+			outFile, err := os.Create(outputFile)
+			if err != nil {
+				return fmt.Errorf("failed to create output file: %v", err)
+			}
+			defer outFile.Close()
+
+			// Connect the commands
+			gzipCmd.Stdin, err = cmd.StdoutPipe()
+			if err != nil {
+				return fmt.Errorf("failed to create pipe: %v", err)
+			}
+			gzipCmd.Stdout = outFile
+			gzipCmd.Stderr = os.Stderr
+			cmd.Stderr = os.Stderr
+
+			// Start the gzip command first
+			if err := gzipCmd.Start(); err != nil {
+				return fmt.Errorf("failed to start gzip: %v", err)
+			}
+
+			// Run the docker save command
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to save image %s: %v", image, err)
+			}
+
+			// Wait for gzip to finish
+			if err := gzipCmd.Wait(); err != nil {
+				return fmt.Errorf("failed to compress: %v", err)
+			}
+		} else {
+			cmd := exec.Command("docker", "save", "-o", outputFile, image)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return fmt.Errorf("failed to save image %s: %v", image, err)
+			}
 		}
 	}
 	return nil
